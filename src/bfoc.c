@@ -43,6 +43,14 @@
 static int generate_c_source(char* input_buf, int input_len, FILE* out);
 
 /**
+ * Statically optimizes brainfuck source code. Modifies the buffer in-place.
+ *
+ * @param input_buf Brainfuck source buffer
+ * @param input_len Brainfuck source length
+ */
+static void bf_static_optimize(char* input_buf, int input_len);
+
+/**
  * Outputs program usage to stderr.
  *
  * @param cmd First command line argument passed to main (argv[0])
@@ -147,6 +155,9 @@ int main(int argc, char** argv) {
     fprintf(c_output_file, "static uint8_t tape[%d];\nstatic int ptr;\n\n", CODEGEN_TAPE_LENGTH);
     fprintf(c_output_file, "int main() {\n");
 
+    /* Perform static optimization. */
+    bf_static_optimize(input_buf, input_len);
+
     /* Write generated code to output. */
     if (generate_c_source(input_buf, input_len, c_output_file)) {
         fprintf(stderr, "error: code generation failed. stopping..\n");
@@ -173,8 +184,8 @@ int main(int argc, char** argv) {
         int child_status;
         wait(&child_status);
 
-	fprintf(stderr, "info: cleaning up intermediate source %s\n", c_output_filename);
-	unlink(c_output_filename);
+        fprintf(stderr, "info: cleaning up intermediate source %s\n", c_output_filename);
+        unlink(c_output_filename);
 
         if (child_status) {
             fprintf(stderr, "error: child process reported compile failed (code %d).\n", child_status);
@@ -247,9 +258,9 @@ int generate_c_source(char* input_buf, int input_len, FILE* output_file) {
                 if (input_buf[j] == '[') {
                     if (--label_stack <= 0) {
                         /* Found the matching label location. */
-		        fprintf(output_file, "\tgoto loop%d; }\n", j);
-			label_placed = 1;
-			break;
+                        fprintf(output_file, "\tgoto loop%d; }\n", j);
+                        label_placed = 1;
+                        break;
                     }
                 }
             }
@@ -261,10 +272,41 @@ int generate_c_source(char* input_buf, int input_len, FILE* output_file) {
 
             ++i;
             break;
+        case 'z':
+            /* Cell zero instruction */
+            fprintf(output_file, "\ttape[ptr] = 0;\n");
+            ++i;
+            break;
+        default:
+            /* Any no-ops will fall here (from static optimization) */
+            ++i;
         }
     }
 
     return 0;
+}
+
+void bf_static_optimize(char* input_buf, int input_len) {
+        /*
+         * 1: Fast cell zeroing
+         * A common patten in BF programs is "[-]" which sets the current cell
+         * value to 0 via a loop. This can be reduced to one instruction to
+         * improve performance.
+         */
+
+        char* cell_zero_loc;
+        int cell_zero_count = 0;
+
+        while ((cell_zero_loc = strstr(input_buf, "[-]"))) {
+                cell_zero_loc[0] = 'z'; /* cell zero instruction */
+                cell_zero_loc[1] = ' '; /* replace the others with no-ops */
+                cell_zero_loc[2] = ' ';
+                cell_zero_count++;
+        }
+
+        if (cell_zero_count) {
+                fprintf(stderr, "info: performed %d cell-zero optimizations\n", cell_zero_count);
+        }
 }
 
 int usage(char* cmd) {
