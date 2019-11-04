@@ -115,7 +115,7 @@ int main(int argc, char** argv) {
     }
 
     input_buf[input_len] = '\0';
-    fprintf(stderr, "info: read %d bytes of input code: %s\n", input_len, input_buf);
+    fprintf(stderr, "info: read %d bytes of input code\n", input_len);
 
     /* Close input file if it's a real file. */
     if (input_file != stdin) {
@@ -160,11 +160,8 @@ int main(int argc, char** argv) {
 
     fprintf(stderr, "info: wrote intermediate C source to %s\n", c_output_filename);
 
-    fprintf(stderr, "info: about to fork, PATH=%s\n", getenv("PATH"));
-
     /* Run gcc and generate the final output. */
     if (!fork()) {
-        fprintf(stderr, "info: child process: starting gcc compile\n");
         int exec_status = execlp(GCC_EXECUTABLE, GCC_EXECUTABLE, "-O3", c_output_filename, "-o", output_file_path, NULL);
 
         if (exec_status) {
@@ -196,7 +193,6 @@ int generate_c_source(char* input_buf, int input_len, FILE* output_file) {
     /* Don't increment i in the loop condition, as most of the cases
      * will increment it during scanning logic anyway. */
     for (int i = 0; i < input_len;) {
-        fprintf(stderr, "debug: starting codegen for %c op\n", input_buf[i]);
         switch (input_buf[i]) {
         case '+':
             /* Walk through any consecutive '+' operators and bundle them into
