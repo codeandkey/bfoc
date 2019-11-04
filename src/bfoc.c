@@ -173,6 +173,9 @@ int main(int argc, char** argv) {
         int child_status;
         wait(&child_status);
 
+	fprintf(stderr, "info: cleaning up intermediate source %s\n", c_output_filename);
+	unlink(c_output_filename);
+
         if (child_status) {
             fprintf(stderr, "error: child process reported compile failed (code %d).\n", child_status);
         } else {
