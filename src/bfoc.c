@@ -152,7 +152,7 @@ int main(int argc, char** argv) {
 
     fprintf(c_output_file, "/*\n * BFOC intermediate code\n * generated on %s */\n\n", ctime(&cur_time));
     fprintf(c_output_file, "#include <stdlib.h>\n#include <stdio.h>\n#include <stdint.h>\n\n");
-    fprintf(c_output_file, "static uint8_t tape[%d];\nstatic int ptr;\n\n", CODEGEN_TAPE_LENGTH);
+    fprintf(c_output_file, "static uint8_t tape[%d], *ptr = tape;\n\n", CODEGEN_TAPE_LENGTH);
     fprintf(c_output_file, "int main() {\n");
 
     /* Perform static optimization. */
@@ -213,14 +213,14 @@ int generate_c_source(char* input_buf, int input_len, FILE* output_file) {
              * one instruction. */
             instr_count = 1;
             while (input_buf[++i] == '+') ++instr_count;
-            fprintf(output_file, "\ttape[ptr] += %d;\n", instr_count);
+            fprintf(output_file, "\t*ptr += %d;\n", instr_count);
             break;
         case '-':
             /* Walk through any consecutive '-' operators and bundle them into
              * one instruction. */
             instr_count = 1;
             while (input_buf[++i] == '-') ++instr_count;
-            fprintf(output_file, "\ttape[ptr] -= %d;\n", instr_count);
+            fprintf(output_file, "\t*ptr -= %d;\n", instr_count);
             break;
         case '>':
             /* Walk through any consecutive '>' operators and bundle them into
@@ -238,17 +238,17 @@ int generate_c_source(char* input_buf, int input_len, FILE* output_file) {
             break;
         case '.':
             /* Output tape value */
-            fprintf(output_file, "\tputchar(tape[ptr]);\n");
+            fprintf(output_file, "\tputchar(*ptr);\n");
             ++i;
             break;
         case ',':
             /* Input tape value */
-            fprintf(output_file, "\ttape[ptr] = getchar();\n");
+            fprintf(output_file, "\t*ptr = getchar();\n");
             ++i;
             break;
         case '[':
             /* New loop point. */
-            fprintf(output_file, "loop%d:\n\tif (tape[ptr]) {\n", i++);
+            fprintf(output_file, "loop%d:\n\tif (*ptr) {\n", i++);
             break;
         case ']':
             /* Walk back through the source code to find the matching label location. */
@@ -274,7 +274,7 @@ int generate_c_source(char* input_buf, int input_len, FILE* output_file) {
             break;
         case 'z':
             /* Cell zero instruction */
-            fprintf(output_file, "\ttape[ptr] = 0;\n");
+            fprintf(output_file, "\t*ptr = 0;\n");
             ++i;
             break;
         default:
