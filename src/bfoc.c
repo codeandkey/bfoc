@@ -165,7 +165,7 @@ int main(int argc, char** argv) {
     /* Run gcc and generate the final output. */
     if (!fork()) {
         fprintf(stderr, "info: child process: starting gcc compile\n");
-        int exec_status = execlp(GCC_EXECUTABLE, GCC_EXECUTABLE, "-g", c_output_filename, "-o", output_file_path, NULL);
+        int exec_status = execlp(GCC_EXECUTABLE, GCC_EXECUTABLE, "-O3", c_output_filename, "-o", output_file_path, NULL);
 
         if (exec_status) {
             fprintf(stderr, "error: child process: couldn't execute compiler: %s\n", strerror(errno));
